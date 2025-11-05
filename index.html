@@ -163,8 +163,12 @@
         
         <div class="controls">
             <select id="modelSelect">
+                <option value="gpt-4o">GPT-4o (Recommended)</option>
+                <option value="gpt-4o-mini">GPT-4o Mini (Fast)</option>
                 <option value="claude-opus-4">Claude Opus 4</option>
                 <option value="claude-sonnet-4">Claude Sonnet 4</option>
+                <option value="llama-3.1-70b">Llama 3.1 70B</option>
+                <option value="llama-3.1-8b">Llama 3.1 8B (Fast)</option>
             </select>
         </div>
         
@@ -194,16 +198,28 @@
 
         async function initPuter() {
             try {
-                await puter.auth.signIn({ askForAuth: true });
+                status.textContent = 'Initializing...';
+                status.className = 'status active';
+                
+                if (!puter.authToken) {
+                    await puter.auth.signIn();
+                }
+                
                 status.textContent = 'Ready';
                 status.className = 'status';
+                generateBtn.disabled = false;
             } catch (error) {
-                status.textContent = 'Authentication required';
+                status.textContent = 'Please login to Puter first';
                 status.className = 'status error';
+                generateBtn.disabled = true;
+                console.error('Init error:', error);
             }
         }
 
-        window.addEventListener('load', initPuter);
+        window.addEventListener('load', () => {
+            generateBtn.disabled = true;
+            initPuter();
+        });
 
         generateBtn.addEventListener('click', async () => {
             if (isGenerating) return;
@@ -229,22 +245,33 @@
                 });
                 
                 currentStream = response;
+                let hasContent = false;
                 
                 for await (const part of response) {
                     if (!isGenerating) break;
                     if (part && part.text) {
+                        hasContent = true;
                         output.textContent += part.text;
                         output.scrollTop = output.scrollHeight;
                     }
                 }
                 
                 if (isGenerating) {
-                    status.textContent = 'Complete';
-                    status.className = 'status';
+                    if (hasContent) {
+                        status.textContent = 'Complete';
+                        status.className = 'status';
+                    } else {
+                        status.textContent = 'No response received';
+                        status.className = 'status error';
+                    }
                 }
                 
             } catch (error) {
-                status.textContent = 'Error: ' + (error.message || 'Unknown error');
+                if (error.message && error.message.includes('Permission denied')) {
+                    status.textContent = 'Error: Please login to puter.com first in another tab';
+                } else {
+                    status.textContent = 'Error: ' + (error.message || 'Unknown error');
+                }
                 status.className = 'status error';
                 console.error('Error details:', error);
             } finally {
