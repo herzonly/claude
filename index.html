@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-x<html lang="en">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -192,6 +192,19 @@ x<html lang="en">
         const output = document.getElementById('output');
         const status = document.getElementById('status');
 
+        async function initPuter() {
+            try {
+                await puter.auth.signIn({ askForAuth: true });
+                status.textContent = 'Ready';
+                status.className = 'status';
+            } catch (error) {
+                status.textContent = 'Authentication required';
+                status.className = 'status error';
+            }
+        }
+
+        window.addEventListener('load', initPuter);
+
         generateBtn.addEventListener('click', async () => {
             if (isGenerating) return;
             
@@ -219,7 +232,7 @@ x<html lang="en">
                 
                 for await (const part of response) {
                     if (!isGenerating) break;
-                    if (part?.text) {
+                    if (part && part.text) {
                         output.textContent += part.text;
                         output.scrollTop = output.scrollHeight;
                     }
@@ -231,8 +244,9 @@ x<html lang="en">
                 }
                 
             } catch (error) {
-                status.textContent = 'Error: ' + error.message;
+                status.textContent = 'Error: ' + (error.message || 'Unknown error');
                 status.className = 'status error';
+                console.error('Error details:', error);
             } finally {
                 isGenerating = false;
                 generateBtn.disabled = false;
